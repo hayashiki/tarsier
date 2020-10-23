@@ -10,10 +10,12 @@ import (
 	"golang.org/x/image/font/gofont/gobold"
 	"golang.org/x/image/math/fixed"
 	"image"
+	"image/jpeg"
+	"io"
 	"io/ioutil"
 	"path/filepath"
+	"strings"
 
-	//"image/jpeg"
 	"image/png"
 	"log"
 	"os"
@@ -40,8 +42,34 @@ func dirwalk(dir string) []string {
 	return paths
 }
 
+func loadImages(imagePath string) error {
+	files, err := ioutil.ReadDir(imagePath)
+	if err != nil {
+		return fmt.Errorf("could read image dir '%s': %v", imagePath, err)
+	}
+
+	for _, f := range files {
+		fname := f.Name()
+
+		name := strings.TrimSuffix(fname, filepath.Ext(fname))
+		if filepath.Ext(fname) != ".jpg" {
+			continue
+		}
+
+		stampPath := imagePath + "/" + f.Name()
+		fmt.Printf("name %v\n", name)
+		fmt.Printf("stampPath %v\n", stampPath)
+	}
+
+	return nil
+}
+
 func main() {
+	//loadImages("./input")
+	//return
+
 	imagePaths := dirwalk("./input")
+
 
 	for _, imagePath := range imagePaths {
 		file, err := os.OpenFile(imagePath, os.O_RDONLY, os.ModePerm)
@@ -53,11 +81,19 @@ func main() {
 			}
 		}()
 
-		img, _, err := image.Decode(file)
+		var img image.Image
+		switch {
+		case strings.HasSuffix(file.Name(), "jpeg") || strings.HasSuffix(file.Name(), "jpg"):
+			img, err = jpeg.Decode(file)
+		case strings.HasSuffix(file.Name(), "png"):
+			img, err = png.Decode(file)
+		}
 
 		if err != nil {
 			log.Fatal(err)
 		}
+
+		//continue
 
 		img = run(img)
 
@@ -121,33 +157,33 @@ func overlayText(imgSrc image.Image, text string) (image.Image, error) {
 func run(img image.Image) image.Image {
 	//_, _, err = image.DecodeConfig(buf)
 	processedImg := resize.Resize(512, 0, img, resize.Lanczos3)
-	processedImg, err := overlayText(processedImg, OVERLAY_TEXT)
-	if err != nil {
-		log.Fatal(err)
+
+	var err error
+
+	// skipフラグがあればスキップしたい、つまりリサイズだけしたい
+	if 1 == 1 {
+		processedImg, err = overlayText(processedImg, OVERLAY_TEXT)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 	return 	processedImg
 }
 
-//out, err := os.Create("test_resized.png")
-//if err != nil {
-//	log.Fatal(err)
-//}
-//defer out.Close()
+// Jpeg Decode
+func JpegDecode(r io.Reader) (im image.Image, err error) {
+	im, err = jpeg.Decode(r)
+	if err != nil {
+		fmt.Printf("jpeg.Decode Error: %s", err)
+	}
+	return
+}
 
-// write new image to file
-//png.Encode(out, m, nil)
-
-// open "test.jpg"
-//file, err := os.Open("./input/gopher.png")
-//if err != nil {
-//	log.Fatal(err)
-//}
-//
-//buf := new(bytes.Buffer)
-//io.Copy(buf, file)
-
-
-// decode jpeg into image.Image
-//buf := new(bytes.Buffer)
-//buf := bytes.NewBuffer(os.Stdin)
-//io.Copy(buf, os.Stdin)
+// Png Decode
+func PngDecode(r io.Reader) (im image.Image, err error) {
+	im, err = png.Decode(r)
+	if err != nil {
+		fmt.Errorf("png.Decode Error: %s", err)
+	}
+	return
+}
