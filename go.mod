@@ -1,4 +1,4 @@
-module tarsier
+module github.com/hayashiki/tarsier
 
 go 1.13
 
