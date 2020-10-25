@@ -1,17 +1,91 @@
 package main
 
 import (
+	"fmt"
+	"github.com/hayashiki/tarsier"
+	"image"
+	"image/png"
+	"io"
+	"log"
 	"os"
-	"tarsier"
+	"path/filepath"
+
+	"github.com/urfave/cli"
 )
 
+// eg. go run cmd/main.go --in="./input/DSC_0763.jpg" --out="./out"
+// eg. go run cmd/main.go --in="./input/gopher.png" --out="./out"
 func main() {
+	app := cli.NewApp()
+	app.Version = "v1.0.0" // TODO versionうめこむ
+	app.Name = "tarsier"
+	app.Usage = "Put text in the image"
 
-	//gen := tarsier.NewGenerator(tarsier.Option{11})
-	//err := gen.Generate(os.Stdin, os.Stdout)
-	//if err != nil {
-	//	fmt.Fprintln(os.Stderr, err)
-	//	os.Exit(1)
-	//}
-	tarsier.GenA(os.Stdin)
+	app.Flags = []cli.Flag{
+		cli.StringFlag{
+			Name:     "in, i",
+			Required: true,
+			Usage:    "target input image",
+		},
+		cli.StringFlag{
+			Name:     "out, o",
+			Value:    ".",
+			Usage:    "target output image",
+		},
+		cli.StringFlag{
+			Name:     "text, t",
+			Value:    tarsier.DefaultOverlayText,
+			Usage:    "append text",
+		},
+	}
+
+	app.Action = func(c *cli.Context) error {
+		in := c.String("in")
+		outFlag := c.String("out")
+		text := c.String("text")
+
+		file, err := os.OpenFile(in, os.O_RDONLY, os.ModePerm)
+		if err != nil {
+			return err
+		}
+
+		defer func() {
+			if err := file.Close(); err != nil {
+				return
+			}
+		}()
+
+		img, err := decode(file)
+		if err != nil {
+			return fmt.Errorf("could read image '%s': %v", in, err)
+		}
+		outImg, err := tarsier.Print(img, text)
+		if err != nil {
+			return fmt.Errorf("could print text '%s': %v", in, err)
+		}
+
+		out, err := os.Create(fmt.Sprintf("%s/%s", outFlag, filepath.Base(file.Name())))
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		defer func() {
+			if err := out.Close(); err != nil {
+				return
+			}
+		}()
+
+		return png.Encode(out, outImg)
+	}
+
+	err := app.Run(os.Args)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func decode(r io.Reader) (image.Image, error) {
+	img, _, err := image.Decode(r)
+
+	return img, err
 }
