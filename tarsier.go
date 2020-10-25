@@ -21,7 +21,6 @@ func Print(img image.Image, text string) (image.Image, error) {
 
 	processedImg := resize.Resize(512, 0, img, resize.Lanczos3)
 
-	return processedImg, nil
 	if text == "" {
 		text = DefaultOverlayText
 	}

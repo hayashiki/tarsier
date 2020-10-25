@@ -1,5 +1,6 @@
 VERSION := $$(make -s show-version)
 CURRENT_REVISION := $(shell git rev-parse --short HEAD)
+BUILD_LDFLAGS = "-s -w -X github.com/hayashiki/tarsier.revision=$(CURRENT_REVISION)"
 GOBIN ?= $(shell go env GOPATH)/bin
 export GO111MODULE ?= on
 
@@ -21,7 +22,7 @@ tag:
 
 .PHONY: build
 build:
-	go build ./cmd/main.go
+	go build -ldflags=$(BUILD_LDFLAGS) ./cmd/tarsier
 
 .PHONY: fmt
 fmt:
